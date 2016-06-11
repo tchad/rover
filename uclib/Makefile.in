@@ -138,7 +138,7 @@ am__installdirs = "$(DESTDIR)$(libdir)" "$(DESTDIR)$(pkgcfgdir)" \
 LTLIBRARIES = $(lib_LTLIBRARIES)
 librover_la_LIBADD =
 am__dirstamp = $(am__leading_dot)dirstamp
-am_librover_la_OBJECTS = src/uc.lo
+am_librover_la_OBJECTS = src/librover_la-uc.lo
 librover_la_OBJECTS = $(am_librover_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -271,6 +271,7 @@ INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
+KDIR = @KDIR@
 LD = @LD@
 LDFLAGS = @LDFLAGS@
 LIBOBJS = @LIBOBJS@
@@ -362,6 +363,7 @@ lib_LTLIBRARIES = librover.la
 librover_la_SOURCES = src/types.h src/uc.h src/uc.c
 librover_la_LDFLAGS = -version-info 0:0:0
 include_HEADERS = src/types.h src/uc.h
+@SIMBUILD_FALSE@librover_la_CPPFLAGS = -I@KDIR@/include
 pkgcfgdir = $(prefix)/lib/pkgconfig
 pkgcfg_DATA = librover.pc
 DISTCLEANFILES = librover.pc librover.pc.in librover-uninstalled.pc librover-uninstalled.sh
@@ -460,7 +462,8 @@ src/$(am__dirstamp):
 src/$(DEPDIR)/$(am__dirstamp):
 	@$(MKDIR_P) src/$(DEPDIR)
 	@: > src/$(DEPDIR)/$(am__dirstamp)
-src/uc.lo: src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
+src/librover_la-uc.lo: src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
 
 librover.la: $(librover_la_OBJECTS) $(librover_la_DEPENDENCIES) $(EXTRA_librover_la_DEPENDENCIES) 
 	$(AM_V_CCLD)$(librover_la_LINK) -rpath $(libdir) $(librover_la_OBJECTS) $(librover_la_LIBADD) $(LIBS)
@@ -473,7 +476,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/uc.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/librover_la-uc.Plo@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.o$$||'`;\
@@ -498,6 +501,13 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LTCOMPILE) -c -o $@ $<
+
+src/librover_la-uc.lo: src/uc.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(librover_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT src/librover_la-uc.lo -MD -MP -MF src/$(DEPDIR)/librover_la-uc.Tpo -c -o src/librover_la-uc.lo `test -f 'src/uc.c' || echo '$(srcdir)/'`src/uc.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/librover_la-uc.Tpo src/$(DEPDIR)/librover_la-uc.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='src/uc.c' object='src/librover_la-uc.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(librover_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o src/librover_la-uc.lo `test -f 'src/uc.c' || echo '$(srcdir)/'`src/uc.c
 
 mostlyclean-libtool:
 	-rm -f *.lo

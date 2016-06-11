@@ -636,6 +636,9 @@ ac_subst_vars='am__EXEEXT_FALSE
 am__EXEEXT_TRUE
 LTLIBOBJS
 LIBOBJS
+SIMBUILD_FALSE
+SIMBUILD_TRUE
+KDIR
 CPP
 LT_SYS_LIBRARY_PATH
 OTOOL64
@@ -764,6 +767,7 @@ with_aix_soname
 with_gnu_ld
 with_sysroot
 enable_libtool_lock
+enable_sim_mode
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1404,6 +1408,7 @@ Optional Features:
   --enable-fast-install[=PKGS]
                           optimize for fast installation [default=yes]
   --disable-libtool-lock  avoid locking (might break parallel builds)
+ --enable-sim-mode Enable simulation mode allowing to build library without kernel dependency
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -12425,6 +12430,33 @@ CC=$lt_save_CC
 
 
 
+# Check whether --enable-sim-mode was given.
+if test "${enable_sim_mode+set}" = set; then :
+  enableval=$enable_sim_mode;
+$as_echo "#define SIM_MODE /**/" >>confdefs.h
+ enablesim=yes
+else
+  as_ac_Header=`$as_echo "ac_cv_header_${KDIR:=/usr/src/linux}/include/misc/rover.h" | $as_tr_sh`
+ac_fn_c_check_header_mongrel "$LINENO" "${KDIR:=/usr/src/linux}/include/misc/rover.h" "$as_ac_Header" "$ac_includes_default"
+if eval test \"x\$"$as_ac_Header"\" = x"yes"; then :
+
+else
+  as_fn_error $? "rover.h not found" "$LINENO" 5
+fi
+
+
+
+fi
+
+ if test x"$enablesim" = xyes; then
+  SIMBUILD_TRUE=
+  SIMBUILD_FALSE='#'
+else
+  SIMBUILD_TRUE='#'
+  SIMBUILD_FALSE=
+fi
+
+
 # Checks for programs.
 ac_ext=c
 ac_cpp='$CPP $CPPFLAGS'
@@ -13406,6 +13438,10 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${am__fastdepCC_TRUE}" && test -z "${am__fastdepCC_FALSE}"; then
   as_fn_error $? "conditional \"am__fastdepCC\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${SIMBUILD_TRUE}" && test -z "${SIMBUILD_FALSE}"; then
+  as_fn_error $? "conditional \"SIMBUILD\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${am__fastdepCC_TRUE}" && test -z "${am__fastdepCC_FALSE}"; then
