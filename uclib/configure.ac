@@ -18,14 +18,13 @@ AC_CONFIG_FILES([Makefile])
 AM_PROG_AR
 LT_INIT
 
-AC_ARG_ENABLE(sim-mode, 
+#option to enable sim mode
+AC_ARG_ENABLE(
+  sim-mode, 
   [ --enable-sim-mode Enable simulation mode allowing to build library without kernel dependency], 
   [AC_DEFINE([SIM_MODE], [], [Simulation mode]) enablesim=yes], 
-  [AC_CHECK_HEADER([${KDIR:=/usr/src/linux}/include/misc/rover.h], 
-    [AC_SUBST([KDIR])], 
-    [AC_MSG_ERROR([rover.h not found])])
-  ]) 
-AM_CONDITIONAL([SIMBUILD], [test x"$enablesim" = xyes]) 
+  []
+)
 
 # Checks for programs.
 AC_PROG_CC
@@ -33,6 +32,12 @@ AC_PROG_CC
 # Checks for libraries.
 
 # Checks for header files.
+AC_CHECK_HEADER(
+  [${KDIR:=/usr/src/linux}/include/misc/rover.h], 
+  [AC_SUBST([KDIR])], 
+  [AC_MSG_ERROR([rover.h not found])]
+)
+
 AC_CHECK_HEADERS([fcntl.h stdint.h stdlib.h unistd.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
