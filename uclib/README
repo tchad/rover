@@ -1,0 +1,12 @@
+- Cross compile build:
+
+KDIR=<kernel sources/headers dir>/linux CC=<path to linaro compilers>/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian-x64/bin/arm-linux-gnueabihf-gcc ac_cv_func_malloc_0_nonnull=yes ./configure --host=arm-linux-gnueabihf --build=x86_64-pc-linux-gnu --prefix=/usr --with-gnu-ld
+
+Elaborate on ac_cv_func_malloc_0_nonnull=yes
+
+- Native sim build:
+KDIR=<kernel sources/headers dir>/linux ./configure --enable-sim-mode --prefix=/usr
+
+- Install to specified directory:
+DESTDIR=<path> make install
+

@@ -21,7 +21,8 @@
 #include <err.h>
 
 #include "uc.h"
-#include "../config.h"
+#include <config.h>
+#include <rover.h>
 
 /*
  * TODO:
@@ -30,18 +31,23 @@
  */
 
 
-struct adsensor* alloc_adsensor()
+struct device_rover* alloc_device_rover()
 {
-	struct adsensor* ret = (struct adsensor*)malloc(sizeof(struct adsensor));
+	struct device_rover* ret = (struct device_rover*)malloc(sizeof(struct device_rover));
 	ret->initialized = 0;
+
 	return ret;
 }
 
 #ifndef SIM_MODE
 
-int init(struct adsensor * dev)
+#define DRV_FILE_PATH "/dev/roveruc0"
+#define DRV_POLL_PATH "/dev/input/event0"
+
+int init_device_rover(struct device_rover * dev)
 {
-    int ret = 0;
+    int ret = EXIT_SUCCESS;
+
     if(dev->initialized) {
         perror("Already initialized");
         return -EPERM;
@@ -68,72 +74,98 @@ int init(struct adsensor * dev)
     }
 
     dev->initialized = 1;
-    return 0;
+
+    return ret;
 }
 
-int release(struct adsensor * dev) 
+int release_device_rover(struct device_rover * dev) 
 {
-    int ret = 0;
+    int ret = EXIT_SUCCESS;
 
     if(dev->initialized) {
         if(close(dev->dev_file) == -1){
-            ret = errno;
+            ret = -errno;
             err(1,"%s","closing drv");
         }
 
         if(close(dev->event_file) == -1){
-            ret = errno;
+            ret = -errno;
             err(1,"%s","closing event file");
         }
     }
+
     free(dev);
     
-    return -ret;
+    return ret;
 }
 
-int send_ioctl_command( struct adsensor * dev, enum ioctl_command cmd, int16_t arg1, int16_t arg2)
+static int send_ioctl_command( struct device_rover * dev, enum ioctl_command cmd, int16_t arg1, int16_t arg2)
 {
-    int ret=0;
+    int ret=EXIT_SUCCESS;
     int16_t args[2] = {arg1, arg2};
     
     if(ioctl(dev->dev_file, cmd, args) == -1) {
-        ret = errno;
+        ret = -errno;
         err(1,"%s","ioctl command");
     }
 
-    return -ret;
+    return ret;
 }
 
-int get_wheels_state(struct adsensor *dev, struct uc0_wheel_state *device)
+
+int set_wheel_speed(struct device_rover *dev, int16_t left, int16_t right)
 {
-    int ret = 0;
+    int ret;
+    ret = send_ioctl_command(dev, SET_WHEEL_SPEED, left, right);
+
+    return ret;
+}
+
+int set_wheel_stop(struct device_rover *dev)
+{
+    int ret;
+    ret = send_ioctl_command(dev, STOP, 0, 0);
+
+    return ret;
+}
+
+int get_device_state(struct device_rover *dev, struct device_state *device)
+{
+    int ret = EXIT_SUCCESS;
     ssize_t bytes_read = 0;
+    struct uc0_wheel_state uc0_dev_state;
+
     if(!dev->initialized){
         perror("Cant read uninitialized resource");
         return -EIO;
     }
 
     if(lseek(dev->dev_file, 0, SEEK_SET) == -1) {
-       ret = errno;
+       ret = -errno;
       err(1,"%s","read wheel state seek");
-        return -ret;
+        return ret;
     }
    
-    bytes_read = read(dev->dev_file, device, sizeof(struct uc0_wheel_state));
+    bytes_read = read(dev->dev_file, &uc0_dev_state, sizeof(struct uc0_wheel_state));
     
 
     if(bytes_read == -1) {
-        ret = errno;
+        ret = -errno;
         err(1,"%s","read wheel state read");
-        return -ret;
+        return ret;
     }
 
-    return 0;
+    device->left_wheel_speed = uc0_dev_state.left_wheel_speed;
+    device->right_wheel_speed = uc0_dev_state.right_wheel_speed;
+    device->wheel_max_speed = uc0_dev_state.wheel_max_speed;
+    device->wheel_min_speed = uc0_dev_state.wheel_min_speed;
+
+    return ret;
 }
 
-int read_event(struct adsensor *dev, struct input_event *ev)
+static int read_event(struct device_rover *dev, struct input_event *ev)
 {
-    int ret =0;
+    int ret = EXIT_SUCCESS;
     ssize_t bytes_read = 0;
 
     if(!dev->initialized){
@@ -144,22 +176,22 @@ int read_event(struct adsensor *dev, struct input_event *ev)
     bytes_read = read(dev->event_file, ev, sizeof(struct input_event));
 
     if(bytes_read == -1) {
-        ret = errno;
+        ret = -errno;
         err(1,"%s","read event");
-        return -ret;
+        return ret;
     }
 
-    return 0;
+    return ret;
 }
 
-int read_distance(struct adsensor *dev, int32_t *distance)
+int read_distance(struct device_rover *dev, int32_t *distance)
 {
-    int ret =0;
+    int ret;
     struct input_event ev;
 
     ret = read_event(dev, &ev);
 
-    if(ret < 0) {
+    if(ret != EXIT_SUCCESS) {
         return ret;
     }
 
@@ -167,39 +199,58 @@ int read_distance(struct adsensor *dev, int32_t *distance)
         *distance = ev.value;
     }
 
-    return 0;
+    return ret;
 }
 
-#else //bridge in simulation mode 
+#else //in simulation mode 
 
-int init(struct adsensor * dev)
+static struct device_state dev_state;
+
+int init_device_rover(struct device_rover * dev)
 {
     printf("SIM: init\n");
-    return 0;
+    dev_state.left_wheel_speed = 0;
+    dev_state.right_wheel_speed = 0;
+    dev_state.wheel_max_speed = 255;
+    dev_state.wheel_min_speed = -255;
+    return EXIT_SUCCESS;
 }
 
-int release(struct adsensor * dev) 
+int release_device_rover(struct device_rover * dev) 
 {
     if(dev != NULL) {
         free(dev);
     }
     
-    return 0;
+    return EXIT_SUCCESS;
 }
 
-int send_ioctl_command( struct adsensor * dev, enum ioctl_command cmd, int16_t arg1, int16_t arg2)
+int set_wheel_speed(struct device_rover *dev, int16_t left, int16_t right)
 {
-    printf("SIM: send_ioctl_command IOCTL: %i arg1: %i arg2: %i\n", cmd, arg1, arg2);
+    printf("SIM: set_wheel_speed: left: %i right: %i\n", left, right);
 
-    return 0;
+    dev_state.left_wheel_speed = left;
+    dev_state.right_wheel_speed = right;
+
+    return EXIT_SUCCESS;
 }
 
-int get_wheels_state(struct adsensor *dev, struct uc0_wheel_state *device)
+int set_wheel_stop(struct device_rover *dev)
 {
-    device->left_wheel_speed = 0;
-    device->right_wheel_speed = 0;
-    device->wheel_max_speed = 255;
-    device->wheel_min_speed = 0;
+    printf("SIM: set_wheel_stop\n");
+
+    dev_state.left_wheel_speed = 0;
+    dev_state.right_wheel_speed = 0;
+
+    return EXIT_SUCCESS;
+}
+
+int get_device_state(struct device_rover *dev, struct device_state *device)
+{
+    device->left_wheel_speed = dev_state.left_wheel_speed;
+    device->right_wheel_speed = dev_state.right_wheel_speed;
+    device->wheel_max_speed = dev_state.wheel_max_speed;
+    device->wheel_min_speed = dev_state.wheel_min_speed;
 
     printf("SIM: get_wheels_state lf: %i rw: %i wmax: %i wmin: %i\n", 
     device->left_wheel_speed,
@@ -207,34 +258,21 @@ int get_wheels_state(struct adsensor *dev, struct uc0_wheel_state *device)
     device->wheel_max_speed,
     device->wheel_min_speed);
 
-    return 0;
+    return EXIT_SUCCESS;
 }
 
-int read_event(struct adsensor *dev, struct input_event *ev)
+int read_distance(struct device_rover *dev, int32_t *distance)
 {
-    printf("SIM: read_event\n");
-
-    return 0;
-}
-
-int read_distance(struct adsensor *dev, int32_t *distance)
-{
-
-    static uint16_t i=0;
     static int32_t last = 50;
-    if(i==100) {
-        i=0;
-        if(last == 50) {
-            last = 10;
-        } else {
-            last = 50;
-        }
+    if(last == 100) {
+        last = 50;
+    }
+    else {
+        last += 10;
     }
     *distance = last;
-    i++;
 
-    usleep(100000);
-    return 0;
+    return EXIT_SUCCESS;
 }
 
 #endif
