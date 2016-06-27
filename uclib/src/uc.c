@@ -19,6 +19,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <err.h>
+#include <syslog.h>
 
 #include "uc.h"
 #include <config.h>
@@ -26,7 +27,7 @@
 
 /*
  * TODO:
- * use syslog for logging err for errors reporting to the console (may be)
+ * use syslog for logging instead of console (may be)
  * man 3 syslog, man 3 err
  */
 
@@ -49,25 +50,25 @@ int init_device_rover(struct device_rover * dev)
     int ret = EXIT_SUCCESS;
 
     if(dev->initialized) {
-        perror("Already initialized");
+        syslog(LOG_ERR, "Device already initialized\n");
         return -EPERM;
     }
 
     dev->dev_file = open(DRV_FILE_PATH, O_RDWR);
     if(dev->dev_file < 0) {
         ret = errno;
-        err(1,"%s","opening drv");
+        syslog(LOG_ERR, "Error opening driver file, %m\n");
         return -ret;
     }
 
     dev->event_file = open(DRV_POLL_PATH, O_RDONLY);
     if(dev->event_file < 0) {
         ret = errno;
-        err(1,"%s","opening event file");
+        syslog(LOG_ERR, "Error opening event file, %m\n");
         //close the opened dev file first
         if(close(dev->dev_file) == -1){
             ret = errno;
-            err(1,"%s","closing drv");
+            syslog(LOG_ERR, "Error while closing driver file, %m\n");
         }
 
         return -ret;
@@ -85,12 +86,12 @@ int release_device_rover(struct device_rover * dev)
     if(dev->initialized) {
         if(close(dev->dev_file) == -1){
             ret = -errno;
-            err(1,"%s","closing drv");
+            syslog(LOG_ERR, "Error while closing driver file, %m\n");
         }
 
         if(close(dev->event_file) == -1){
             ret = -errno;
-            err(1,"%s","closing event file");
+            syslog(LOG_ERR, "Error while closing event file, %m\n");
         }
     }
 
@@ -106,7 +107,7 @@ static int send_ioctl_command( struct device_rover * dev, enum ioctl_command cmd
     
     if(ioctl(dev->dev_file, cmd, args) == -1) {
         ret = -errno;
-        err(1,"%s","ioctl command");
+        syslog(LOG_ERR, "ioctl command error, %m\n");
     }
 
     return ret;
@@ -136,13 +137,15 @@ int get_device_state(struct device_rover *dev, struct device_state *device)
     struct uc0_wheel_state uc0_dev_state;
 
     if(!dev->initialized){
-        perror("Cant read uninitialized resource");
+        syslog(LOG_ERR, "Cannot read uninitialized resource\n");
+
         return -EIO;
     }
 
     if(lseek(dev->dev_file, 0, SEEK_SET) == -1) {
-       ret = -errno;
-      err(1,"%s","read wheel state seek");
+        ret = -errno;
+        syslog(LOG_ERR, "Error while readinig device state, %m\n");
+
         return ret;
     }
    
@@ -151,7 +154,8 @@ int get_device_state(struct device_rover *dev, struct device_state *device)
 
     if(bytes_read == -1) {
         ret = -errno;
-        err(1,"%s","read wheel state read");
+        syslog(LOG_ERR, "Error while readinig device state, %m\n");
+
         return ret;
     }
 
@@ -169,7 +173,7 @@ static int read_event(struct device_rover *dev, struct input_event *ev)
     ssize_t bytes_read = 0;
 
     if(!dev->initialized){
-        perror("Cant read uninitialized resource");
+        syslog(LOG_ERR, "Cannot read uninitialized resource\n");
         return -EIO;
     }
 
@@ -177,7 +181,8 @@ static int read_event(struct device_rover *dev, struct input_event *ev)
 
     if(bytes_read == -1) {
         ret = -errno;
-        err(1,"%s","read event");
+        syslog(LOG_ERR, "Error reading distance event, %m\n");
+
         return ret;
     }
 
@@ -208,7 +213,8 @@ static struct device_state dev_state;
 
 int init_device_rover(struct device_rover * dev)
 {
-    printf("SIM: init\n");
+    syslog(LOG_NOTICE, "SIM: init\n");
+
     dev_state.left_wheel_speed = 0;
     dev_state.right_wheel_speed = 0;
     dev_state.wheel_max_speed = 255;
@@ -227,7 +233,7 @@ int release_device_rover(struct device_rover * dev)
 
 int set_wheel_speed(struct device_rover *dev, int16_t left, int16_t right)
 {
-    printf("SIM: set_wheel_speed: left: %i right: %i\n", left, right);
+    syslog(LOG_NOTICE, "SIM: set_wheel_speed: left: %i right: %i\n", left, right);
 
     dev_state.left_wheel_speed = left;
     dev_state.right_wheel_speed = right;
@@ -237,7 +243,7 @@ int set_wheel_speed(struct device_rover *dev, int16_t left, int16_t right)
 
 int set_wheel_stop(struct device_rover *dev)
 {
-    printf("SIM: set_wheel_stop\n");
+    syslog(LOG_NOTICE, "SIM: set_wheel_stop\n");
 
     dev_state.left_wheel_speed = 0;
     dev_state.right_wheel_speed = 0;
@@ -252,7 +258,7 @@ int get_device_state(struct device_rover *dev, struct device_state *device)
     device->wheel_max_speed = dev_state.wheel_max_speed;
     device->wheel_min_speed = dev_state.wheel_min_speed;
 
-    printf("SIM: get_wheels_state lf: %i rw: %i wmax: %i wmin: %i\n", 
+    syslog(LOG_NOTICE, "SIM: get_wheels_state lf: %i rw: %i wmax: %i wmin: %i\n", 
     device->left_wheel_speed,
     device->right_wheel_speed,
     device->wheel_max_speed,

@@ -1,7 +1,7 @@
 /*
-* roveruclibtest.c
+ * roveruclibtest.c
  * 
- * Utility test app for the rever control library.
+ * Utility test app for the server control library.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -14,6 +14,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <uc.h>
+#include <syslog.h>
 
 void print_usage()
 {
@@ -58,13 +59,16 @@ void set_speed(struct device_rover *dev, int16_t d_left, int16_t d_right)
 }
 
 
-int main()
+int main(int argc, char *argv[])
 {
     int run;
     int ret;
     struct device_rover* dev;
     char buff;
     int32_t dist;
+
+    openlog(argv[0], LOG_PID|LOG_NOWAIT, LOG_USER);
+
 
     dev = alloc_device_rover();
     if(dev == NULL) {
