@@ -16,6 +16,7 @@
 #include <netinet/in.h>
 
 #include "nettypes.h"
+#include "videostreammanager.h"
 
 
 namespace RoverNet
@@ -24,14 +25,13 @@ namespace RoverNet
     {
         public:
             explicit NetService(NetMsgQueueShrPtr incomingQueue,
-                    NetMsgQueueShrPtr outgoingQueue);
+                    NetMsgQueueShrPtr outgoingQueue, 
+                    const VideoStreamManager* const vidStreamMgr);
             NetService(const NetService&) = delete;
             NetService& operator=(const NetService&) = delete;
 
             void Init();
             void Stop();
-            bool Running() const noexcept;
-            void ThreadJoin();
 
         private:
             NetMsgQueueShrPtr inQueue;
@@ -41,9 +41,12 @@ namespace RoverNet
             pthread_t threadNetworkIncoming;
             pthread_t threadNetworkOutgoing;
 
-            static void ThreadDeviceStatusProcedure(void *arg);
-            static void ThreadNetworkIncomingProcedure(void *arg);
-            static void ThreadNetworkOutgoingProcedure(void *arg);
+            static void* ThreadDeviceStatusProcedure(void *arg);
+            static void* ThreadNetworkIncomingProcedure(void *arg);
+            static void* ThreadNetworkOutgoingProcedure(void *arg);
+
+            /* NetService does not hold ownership iver this pointer */
+            const VideoStreamManager* const videoStreamManager;
     };
 };
 

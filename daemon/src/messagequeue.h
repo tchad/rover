@@ -14,21 +14,20 @@
 #include <queue>
 #include <pthread.h>
 
+
 template<typename T>
 class MessageQueue
 {
     public:
         using size_type = typename std::queue<T>::size_type;
 
-        explicit MessageQueue() = default;
+        explicit MessageQueue();
         MessageQueue(const MessageQueue<T>&) = delete;
         MessageQueue<T>& operator=(const MessageQueue<T>&) = delete;
+        ~MessageQueue();
 
         void Enqueue(const T& item);
-        void Enqueue(T&& item);
         T Dequeue();
-        bool Empty() const noexcept;
-        size_type Count() const noexcept;
 
     private:
         std::queue<T> queue;

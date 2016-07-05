@@ -23,28 +23,30 @@ class DeviceUC0Service
                 RoverNet::NetMsgQueueShrPtr outgoingQueue);
         DeviceUC0Service(const DeviceUC0Service&) = delete;
         DeviceUC0Service& operator=(const DeviceUC0Service&) = delete;
+        ~DeviceUC0Service();
 
         void Init();
         void Stop();
-        bool Running() const noexcept;
-        void ThreadJoin();
 
     private:
         RoverNet::NetMsgQueueShrPtr inQueue;
         RoverNet::NetMsgQueueShrPtr outQueue;
 
-        pthread_t threadIncomingQueue;
-        pthread_t threadDeviceControl;
+        pthread_t threadIncomingCommand;
+        pthread_t threadDelayedMessage;
         pthread_t threadDistanceMonitor;
 
-        static void ThreadIncomingQueueProcedure(void *arg);
-        static void ThreadDeviceControlProcedure(void *arg);
-        static void ThreadDistanceMonitorProcedure(void *arg);
+        static void* ThreadIncomingCommandProcedure(void *arg);
+        static void* ThreadDelayedMessageProcedure(void *arg);
+        static void* ThreadDistanceMonitorProcedure(void *arg);
 
+        RoverNet::Message delayedMessage;
+        pthread_mutex_t deviceLockMutex;
         device_rover* deviceHandler;
 
-        RoverNet::Message currentMessage;
-        pthread_mutex_t currentMessageMutex;
+        pthread_mutex_t distanceMonitorMutex;
+        pthread_cond_t distanceMonitorCond;
+
 };
 
 

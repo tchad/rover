@@ -15,24 +15,27 @@
 
 #include "nettypes.h"
 #include "deviceuc0service.h"
+#include "videostreammanager.h"
 #include "netservice.h"
 
 class Server
 {
     public:
-        explicit Server() = default;
+        explicit Server();
         Server(const Server&) = delete;
         Server& operator=(const Server&) = delete;
+
+        void Start();
+        void Stop();
 
     private:
         RoverNet::NetMsgQueueShrPtr inQueue;
         RoverNet::NetMsgQueueShrPtr outQueue;
 
+        VideoStreamManager videoStreamManager;
         std::unique_ptr<DeviceUC0Service> uc0Service;
         std::unique_ptr<RoverNet::NetService> netService;
 
-        void Start();
-        void Stop();
 };
 
 #endif /* _SERVER_H_ */

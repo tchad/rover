@@ -25,6 +25,8 @@
 #include <signal.h>
 
 #include "util.h"
+#include "exceptions.h"
+#include "server.h"
 
 volatile bool RUNNING;
 
@@ -66,9 +68,23 @@ void Run()
         exit(EXIT_FAILURE);
     }
 
-    while(RUNNING){
-        sleep(1);
-        syslog(LOG_NOTICE, "ping\n");
+    try {
+        Server server;
+        server.Start();
+
+        while(RUNNING){
+            sleep(1);
+        }
+
+        server.Stop();
+    }
+    catch (const std::exception& e)
+    {
+        syslog(LOG_ERR, e.what());
+    }
+    catch (...)
+    {
+        syslog(LOG_ERR, "Unknown exception occured.\n");
     }
     
 }

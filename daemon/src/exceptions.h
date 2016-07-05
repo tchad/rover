@@ -12,18 +12,31 @@
 #define _EXCEPRIONS_H_
 
 #include <exception>
+#include <stdexcept>
 
 namespace RoverExceptions
 {
-    class uninitialized : public std::exception
+    class uninitialized : public std::runtime_error
     {
         public:
+            explicit uninitialized(const std::string &what_arg):
+                runtime_error(what_arg) {}
+
+            explicit uninitialized(const char* what_arg):
+                runtime_error(what_arg) {}
+
             virtual ~uninitialized() = default;
     };
 
-    class service_unavailable : public std::exception
+    class service_unavailable : public std::runtime_error
     {
         public:
+            explicit service_unavailable(const std::string &what_arg):
+                runtime_error(what_arg) {}
+
+            explicit service_unavailable(const char* what_arg):
+                runtime_error(what_arg) {}
+
             virtual ~service_unavailable() = default;
     };
 };
