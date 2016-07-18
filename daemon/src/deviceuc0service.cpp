@@ -12,26 +12,22 @@
 #include <signal.h>
 #include <unistd.h>
 #include <time.h>
-#include <sstream>
 
 #include "deviceuc0service.h"
-#include "exceptions.h"
+#include "util.h"
+#include "logging.h"
 
 
 DeviceUC0Service::DeviceUC0Service(RoverNet::NetMsgQueueShrPtr incomingQueue,
         RoverNet::NetMsgQueueShrPtr outgoingQueue):
     deviceHandler(nullptr),
     inQueue(incomingQueue),
-    outQueue(outgoingQueue)
+    outQueue(outgoingQueue),
+    distanceRequestPending(false)
 {
-    if(0 != pthread_mutex_init(&deviceLockMutex, NULL))
-        throw std::runtime_error("DeviceUC0Service: Unable to initialize deviceLockMutex");
-
-    if(0 != pthread_mutex_init(&distanceMonitorMutex, NULL))
-        throw std::runtime_error("DeviceUC0Service: Unable to initialize distanceMonitorMutex");
-
-    if(0 != pthread_cond_init(&distanceMonitorCond, NULL))
-        throw std::runtime_error("DeviceUC0Service: Unable to initialize distanceMonitorCond");
+    PTHREAD_GUARD( pthread_mutex_init(&deviceLockMutex, NULL) );
+    PTHREAD_GUARD( pthread_mutex_init(&distanceMonitorMutex, NULL) );
+    PTHREAD_GUARD( pthread_cond_init(&distanceMonitorCond, NULL) );
 
     delayedMessage.msgType = RoverNet::MessageType::INVALID;
 }
@@ -58,43 +54,32 @@ void DeviceUC0Service::Init()
     delayedMessage.msgType = RoverNet::MessageType::INVALID;
 
     deviceHandler = alloc_device_rover();
-    if(deviceHandler == NULL) 
-        throw std::runtime_error("DeviceUC0Service::Init: Unable to allocate device handler");
+    if(deviceHandler == NULL) THROW_RUNTIME_MSG("Unable to allocate device handler");
 
-    if(EXIT_SUCCESS != init_device_rover(deviceHandler))
-        throw std::runtime_error("DeviceUC0Service::Init: Unable to initialize device structure");
+    if(EXIT_SUCCESS != init_device_rover(deviceHandler)) THROW_RUNTIME_MSG("Unable to initialize device");
 
-    //secure this with exception
-    if( 0 != pthread_create(&threadIncomingCommand, NULL, ThreadIncomingCommandProcedure, this))
-        throw std::runtime_error("DeviceUC0Service::Init: Failed to start incoming cmd thread");
-
-    if( 0 != pthread_create(&threadDelayedMessage, NULL, ThreadDelayedMessageProcedure, this))
-        throw std::runtime_error("DeviceUC0Service::Init: Failed to start delayed message thread");
-
-    if( 0 != pthread_create(&threadDistanceMonitor, NULL, ThreadDistanceMonitorProcedure, this))
-        throw std::runtime_error("DeviceUC0Service::Init: Failed to start distance monitor thread");
-
+    PTHREAD_GUARD( pthread_create(&threadIncomingCommand, NULL, ThreadIncomingCommandProcedure, this) );
+    PTHREAD_GUARD( pthread_create(&threadDelayedMessage, NULL, ThreadDelayedMessageProcedure, this) );
+    PTHREAD_GUARD( pthread_create(&threadDistanceMonitor, NULL, ThreadDistanceMonitorProcedure, this) );
 }
 
 void DeviceUC0Service::Stop()
 {
-    if( 0 != pthread_cancel(threadDistanceMonitor))
-        throw std::runtime_error("DeviceUC0Service::Stop: Failed to cancel distance monitor thread");
+/*
+ * NOTE: since pthread_cancel will return either 0 or ESRCH which in both cases we do not care
+ * therefore pthread_cancel does not have to be guarded
+ */
+    pthread_cancel(threadDistanceMonitor);
+    pthread_cancel(threadDelayedMessage);
+    pthread_cancel(threadIncomingCommand);
 
-    if( 0 != pthread_cancel(threadDelayedMessage))
-        throw std::runtime_error("DeviceUC0Service::Stop: Failed to cancel delayed message thread");
+    PTHREAD_GUARD( pthread_join(threadDistanceMonitor, NULL) );
+    PTHREAD_GUARD( pthread_join(threadDelayedMessage, NULL) );
+    PTHREAD_GUARD( pthread_join(threadIncomingCommand, NULL) );
 
-    if( 0 != pthread_cancel(threadIncomingCommand))
-        throw std::runtime_error("DeviceUC0Service::Stop: Failed to cancel incoming command thread");
-
-    if( 0 != pthread_join(threadDistanceMonitor, NULL))
-        throw std::runtime_error("DeviceUC0Service::Stop: Failed to join on distance monitor thread");
-
-    if( 0 != pthread_join(threadDelayedMessage, NULL))
-        throw std::runtime_error("DeviceUC0Service::Stop: Failed to join delayed message thread");
-
-    if( 0 != pthread_join(threadIncomingCommand, NULL))
-        throw std::runtime_error("DeviceUC0Service::Stop: Failed to join incoming command thread");
+    if(deviceHandler != nullptr) {
+        release_device_rover(deviceHandler);
+    }
 
 }
 
@@ -106,8 +91,7 @@ void* DeviceUC0Service::ThreadIncomingCommandProcedure(void *arg)
  */
     DeviceUC0Service* dev = static_cast<DeviceUC0Service*>(arg);
     try {
-        bool run = true;
-        while(run) {
+        while(true) {
             RoverNet::Message msg = dev->inQueue->Dequeue();
             switch(msg.msgType) {
                 case RoverNet::MessageType::CMD_SET_LEFT_WHEEL_SPEED:
@@ -115,13 +99,9 @@ void* DeviceUC0Service::ThreadIncomingCommandProcedure(void *arg)
                 case RoverNet::MessageType::CMD_SET_WHEELS_SPEED:
                 case RoverNet::MessageType::CMD_STOP:
                     {
-                        if(0 != pthread_mutex_lock(&(dev->deviceLockMutex)))
-                            throw std::runtime_error("DeviceUC0Service: Unable to lock deviceLockMutex");
-                        
+                        PTHREAD_GUARD( pthread_mutex_lock(&(dev->deviceLockMutex)) );
                         dev->delayedMessage = msg;
-
-                        if(0 != pthread_mutex_unlock(&(dev->deviceLockMutex)))
-                            throw std::runtime_error("DeviceUC0Service: Unable to unlock deviceLockMutex");
+                        PTHREAD_GUARD( pthread_mutex_unlock(&(dev->deviceLockMutex)) );
                     }
                     break;
                 case RoverNet::MessageType::REQ_WHEELS_STATE:
@@ -129,16 +109,11 @@ void* DeviceUC0Service::ThreadIncomingCommandProcedure(void *arg)
                         device_state devState;
                         int responseStatus;
 
-                        if(0 != pthread_mutex_lock(&(dev->deviceLockMutex)))
-                            throw std::runtime_error("DeviceUC0Service: Unable to lock deviceLockMutex");
-                        
+                        PTHREAD_GUARD( pthread_mutex_lock(&(dev->deviceLockMutex)) );
                         responseStatus = get_device_state(dev->deviceHandler, &devState);
+                        PTHREAD_GUARD( pthread_mutex_unlock(&(dev->deviceLockMutex)) );
 
-                        if(0 != pthread_mutex_unlock(&(dev->deviceLockMutex)))
-                            throw std::runtime_error("DeviceUC0Service: Unable to unlock deviceLockMutex");
-
-                        if(EXIT_SUCCESS != responseStatus)
-                            throw std::runtime_error("DeviceUC0Service: error reading device state");
+                        if(EXIT_SUCCESS != responseStatus) THROW_RUNTIME_MSG("error reading device state");
 
                         RoverNet::Message response;
                         response.msgType = RoverNet::MessageType::MSG_WHEELS_STATE;
@@ -152,15 +127,17 @@ void* DeviceUC0Service::ThreadIncomingCommandProcedure(void *arg)
                     break;
                 case RoverNet::MessageType::REQ_DISTANCE:
                     {
-                        if(0 != pthread_cond_signal(&(dev->distanceMonitorCond)))
-                                throw std::runtime_error("DeviceUC0Service: Unable to signal distance monitor cond");
+                        PTHREAD_GUARD( pthread_mutex_lock(&(dev->distanceMonitorMutex)) );
+                        dev->distanceRequestPending = true;
+                        PTHREAD_GUARD( pthread_mutex_unlock(&(dev->distanceMonitorMutex)) );
+                        PTHREAD_GUARD( pthread_cond_signal(&(dev->distanceMonitorCond)) );
                     }
                     break;
                 default:
                     {
                         std::stringstream ss;
                         ss << "Unsupported message received " << msg.msgType;
-                        throw std::runtime_error(ss.str());
+                        THROW_RUNTIME_MSG(ss.str().c_str());
                     }
             };
 
@@ -168,14 +145,11 @@ void* DeviceUC0Service::ThreadIncomingCommandProcedure(void *arg)
         }
     }
     catch(const std::exception &e) {
-        syslog(LOG_ERR, "DeviceUC0Service: Incomming command thread raised exception.\n");
-        syslog(LOG_ERR, e.what());
-
+        syslog(LOG_ERR, LOG_EXCEPT("DeviceUC0Service", e));
         kill(getpid(), SIGTERM);
     }
     catch(...) {
-        syslog(LOG_ERR, "DeviceUC0Service: Incomming command thread raised unknown exception.\n");
-
+        syslog(LOG_ERR, LOG_MSG("DeviceUC0Service", "unknown exception"));
         kill(getpid(), SIGTERM);
     }
 }
@@ -192,7 +166,7 @@ namespace {
 void* DeviceUC0Service::ThreadDelayedMessageProcedure(void *arg)
 {
 /*
- * NOTE: The purpose of this thread is mainly to offload the communication between
+ * NOTE: The purpose of this thread is to offload the communication between
  * driver and the uc0 occuring for the commands that set wheels speed.
  * Later the driver should implement its own thread that will handle the load
  * Commands that set wheels speed that occur in short amount of time between them
@@ -202,13 +176,12 @@ void* DeviceUC0Service::ThreadDelayedMessageProcedure(void *arg)
  * and should not free it
  */
     DeviceUC0Service* dev = static_cast<DeviceUC0Service*>(arg);
+    int responseStatus;
+
     try {
         while(true) {
 
-            if(0 != pthread_mutex_lock(&(dev->deviceLockMutex)))
-                throw std::runtime_error("DeviceUC0Service: Unable to lock deviceLockMutex");
-
-            int responseStatus;
+            PTHREAD_GUARD( pthread_mutex_lock(&(dev->deviceLockMutex)) );
             pthread_cleanup_push(CleanupMutexUnlock, &(dev->deviceLockMutex));
 
             switch(dev->delayedMessage.msgType) {
@@ -220,6 +193,9 @@ void* DeviceUC0Service::ThreadDelayedMessageProcedure(void *arg)
                     {
                         device_state devState;
                         responseStatus = get_device_state(dev->deviceHandler, &devState);
+/*
+ * NOTE: If the response was not EXIT_SUCCESS we immediately break and let the later portion to throw 
+ */
                         if(EXIT_SUCCESS != responseStatus)
                             break;
 
@@ -246,60 +222,92 @@ void* DeviceUC0Service::ThreadDelayedMessageProcedure(void *arg)
                     {
                         std::stringstream ss;
                         ss << "Unsupported message received " << dev->delayedMessage.msgType;
-                        throw std::runtime_error(ss.str());
+                        THROW_RUNTIME_MSG(ss.str().c_str());
                     }
             };
 
             dev->delayedMessage.msgType = RoverNet::MessageType::INVALID;
             pthread_cleanup_pop(0);
+            PTHREAD_GUARD( pthread_mutex_unlock(&(dev->deviceLockMutex)) );
+            if(EXIT_SUCCESS != responseStatus) THROW_RUNTIME_MSG("error sending command to the device");
 
-            if(0 != pthread_mutex_unlock(&(dev->deviceLockMutex)))
-                throw std::runtime_error("DeviceUC0Service: Unable to unlock deviceLockMutex");
-
-            if(EXIT_SUCCESS != responseStatus)
-                throw std::runtime_error("DeviceUC0Service: error sending command to the device");
-
-            timespec t1, t2;
-            t1.tv_sec = 0;
-            t1.tv_nsec = 100,000,000; // 100 msec
-            
 /*
- * NOTE: Review this section and possibly relax the fail condition
+ * TODO: Review this section and possibly relax the fail condition
  */
-            if( -1 == nanosleep(&t1, &t2))
-                throw std::runtime_error("DeviceUC0Service: nanosleep failed");
-            
+            timespec t1, t2;
+            t1.tv_sec = DEV_CMD_SEND_T_SEC;
+            t1.tv_nsec = DEV_CMD_SEND_T_NSEC;
+            if( -1 == nanosleep(&t1, &t2)) THROW_RUNTIME();
         }
     }
-    catch(const std::runtime_error &e) {
-        syslog(LOG_ERR, "DeviceUC0Service: Delayed message thread raised exception.\n");
-        syslog(LOG_ERR, e.what());
-
+    catch(const std::exception &e) {
+        syslog(LOG_ERR, LOG_EXCEPT("DeviceUC0Service", e));
         kill(getpid(), SIGTERM);
     }
     catch(...) {
-        syslog(LOG_ERR, "DeviceUC0Service: Delayed message thread raised unknown exception.\n");
-
+        syslog(LOG_ERR, LOG_MSG("DeviceUC0Service", "unknown exception"));
         kill(getpid(), SIGTERM);
     }
 }
 
 void* DeviceUC0Service::ThreadDistanceMonitorProcedure(void *arg)
 {
+    DeviceUC0Service* dev = static_cast<DeviceUC0Service*>(arg);
+    bool proceed = false;
+/*
+ * TODO: Improvement needed
+ * NOTE: Need a copy of the structure that describe the device to avoid the need
+ * to lock the deviceMutex every time we obtain the distance. 
+ * The distance is coming from different device file than the general commands
+ * so it does not present any collsion problem
+ */
+    device_rover device;
+
     try {
+        PTHREAD_GUARD( pthread_mutex_lock(&(dev->deviceLockMutex)) );
+        device = *(dev->deviceHandler);
+        PTHREAD_GUARD( pthread_mutex_unlock(&(dev->deviceLockMutex)) );
+
         while(true) {
-            //TODO: Implement me
+            PTHREAD_GUARD( pthread_mutex_lock(&(dev->distanceMonitorMutex)) );
+            pthread_cleanup_push(CleanupMutexUnlock, &(dev->distanceMonitorMutex));
+
+/*
+ * NOTE: We need to release the command procedure thread as soon as possible
+ * Instead requesting the distance in this conditional, defer it and release distance mutex immediately
+ */
+            if(dev->distanceRequestPending) {
+                proceed = true;
+                dev->distanceRequestPending = false;
+            }
+            else {
+                PTHREAD_GUARD( pthread_cond_wait(&(dev->distanceMonitorCond), &(dev->distanceMonitorMutex)) );
+            }
+
+            pthread_cleanup_pop(0);
+
+            if(0 != pthread_mutex_unlock(&(dev->distanceMonitorMutex)))
+                    throw std::runtime_error("DeviceUC0Service: Unable to unlock distanceMonitorMutex");
+
+            if(proceed) {
+                proceed = false;
+
+                RoverNet::Message response;
+                response.msgType = RoverNet::MessageType::MSG_DISTANCE;
+
+                if(EXIT_SUCCESS != read_distance(&device, &response.data.distance.distanceCM))
+                    THROW_RUNTIME_MSG("Unable to obtain distance reading from device");
+                
+                dev->outQueue->Enqueue(response);
+            }
         }
     }
-    catch(const std::runtime_error &e) {
-        syslog(LOG_ERR, "DeviceUC0Service: Distance monitor thread raised exception.\n");
-        syslog(LOG_ERR, e.what());
-
+    catch(const std::exception &e) {
+        syslog(LOG_ERR, LOG_EXCEPT("DeviceUC0Service", e));
         kill(getpid(), SIGTERM);
     }
     catch(...) {
-        syslog(LOG_ERR, "DeviceUC0Service: Distance monitor thread raised unknown exception.\n");
-
+        syslog(LOG_ERR, LOG_MSG("DeviceUC0Service", "unknown exception"));
         kill(getpid(), SIGTERM);
     }
 }

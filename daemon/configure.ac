@@ -14,6 +14,7 @@ AC_CONFIG_FILES([Makefile])
 # Checks for programs.
 AC_PROG_CXX
 
+AC_SEARCH_LIBS([pthread_create], [pthread])
 # Checks for libraries.
 PKG_CHECK_MODULES([DEPS], [librover])
 

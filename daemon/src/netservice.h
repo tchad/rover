@@ -12,8 +12,6 @@
 #define _NET_SERVICE_H_
 
 #include <pthread.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
 
 #include "nettypes.h"
 #include "videostreammanager.h"
@@ -29,6 +27,7 @@ namespace RoverNet
                     const VideoStreamManager* const vidStreamMgr);
             NetService(const NetService&) = delete;
             NetService& operator=(const NetService&) = delete;
+            ~NetService();
 
             void Init();
             void Stop();
@@ -47,6 +46,13 @@ namespace RoverNet
 
             /* NetService does not hold ownership iver this pointer */
             const VideoStreamManager* const videoStreamManager;
+
+            /* -1 if disconnected, connected otherwise */
+            int clientConnectedSocket;
+            pthread_mutex_t clientConnectedMutex;
+
+            static Message HostToNet(Message src);
+            static Message NetToHost(Message src);
     };
 };
 

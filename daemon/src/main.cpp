@@ -25,8 +25,8 @@
 #include <signal.h>
 
 #include "util.h"
-#include "exceptions.h"
 #include "server.h"
+#include "logging.h"
 
 volatile bool RUNNING;
 
@@ -41,7 +41,7 @@ void PrintUsage(FILE *s)
 void ExitSigHandler(int sig)
 {
     RUNNING = false;
-    syslog(LOG_NOTICE, "caught terminating signal, shutting down.\n");
+    syslog(LOG_NOTICE, LOG_MSG("MAIN", "caught terminating signal, shutting down.\n"));
 }
 
 void Run()
@@ -49,22 +49,22 @@ void Run()
     RUNNING = true;
 
     if(signal(SIGINT, ExitSigHandler) == SIG_ERR){
-        syslog(LOG_ERR, "Error registering SIGINT handler.\n");
+        syslog(LOG_ERR, LOG_MSG_ERR("MAIN"));
         exit(EXIT_FAILURE);
     }
 
     if(signal(SIGTERM, ExitSigHandler) == SIG_ERR){
-        syslog(LOG_ERR, "Error registering SIGTERM handler.\n");
+        syslog(LOG_ERR, LOG_MSG_ERR("MAIN"));
         exit(EXIT_FAILURE);
     }
 
     if(signal(SIGHUP, ExitSigHandler) == SIG_ERR){
-        syslog(LOG_ERR, "Error registering SIGHUP handler.\n");
+        syslog(LOG_ERR, LOG_MSG_ERR("MAIN"));
         exit(EXIT_FAILURE);
     }
 
     if(signal(SIGQUIT, ExitSigHandler) == SIG_ERR){
-        syslog(LOG_ERR, "Error registering SIGQUIT handler.\n");
+        syslog(LOG_ERR, LOG_MSG_ERR("MAIN"));
         exit(EXIT_FAILURE);
     }
 
@@ -80,11 +80,11 @@ void Run()
     }
     catch (const std::exception& e)
     {
-        syslog(LOG_ERR, e.what());
+        syslog(LOG_ERR, LOG_EXCEPT("MAIN", e));
     }
     catch (...)
     {
-        syslog(LOG_ERR, "Unknown exception occured.\n");
+        syslog(LOG_ERR, LOG_MSG("MAIN", "Unknown exception occured.\n"));
     }
     
 }
@@ -105,16 +105,16 @@ void Daemonize()
         umask(0);
 
         openlog(MAIN_NAME, LOG_PID|LOG_NOWAIT,LOG_USER);
-        syslog(LOG_NOTICE, "Starting daemon.\n");
+        syslog(LOG_NOTICE, LOG_MSG("MAIN","Starting daemon.\n"));
 
         pid_t sid = setsid();
         if(sid < 0) {
-            syslog(LOG_ERR, "Error creating process group.\n");
+            syslog(LOG_ERR, LOG_MSG("MAIN","Error creating process group.\n"));
             exit(EXIT_FAILURE);
         }
         
         if(chdir("/") < 0) {
-            syslog(LOG_ERR, "Error changing working directory to /.\n");
+            syslog(LOG_ERR, LOG_MSG("MAIN","Error changing working directory to /.\n"));
             exit(EXIT_FAILURE);
         }
 
@@ -132,7 +132,7 @@ void Daemonize()
 void RunLocal()
 {
         openlog(MAIN_NAME, LOG_PID|LOG_NOWAIT,LOG_USER);
-        syslog(LOG_NOTICE, "Starting local.\n");
+        syslog(LOG_NOTICE, LOG_MSG("MAIN", "Starting local.\n"));
 
         Run();
 

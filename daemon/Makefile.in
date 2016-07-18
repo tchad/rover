@@ -104,7 +104,13 @@ CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
 am__dirstamp = $(am__leading_dot)dirstamp
-am_rover_daemon_OBJECTS = src/rover_daemon-main.$(OBJEXT)
+am_rover_daemon_OBJECTS = src/rover_daemon-main.$(OBJEXT) \
+	src/rover_daemon-deviceuc0service.$(OBJEXT) \
+	src/rover_daemon-logging.$(OBJEXT) \
+	src/rover_daemon-messagequeue.$(OBJEXT) \
+	src/rover_daemon-netservice.$(OBJEXT) \
+	src/rover_daemon-server.$(OBJEXT) \
+	src/rover_daemon-videostreammanager.$(OBJEXT)
 rover_daemon_OBJECTS = $(am_rover_daemon_OBJECTS)
 am__DEPENDENCIES_1 =
 rover_daemon_DEPENDENCIES = $(am__DEPENDENCIES_1)
@@ -171,11 +177,12 @@ CTAGS = ctags
 CSCOPE = cscope
 AM_RECURSIVE_TARGETS = cscope
 am__DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/config.h.in \
+	$(top_srcdir)/build-aux/compile \
 	$(top_srcdir)/build-aux/depcomp \
 	$(top_srcdir)/build-aux/install-sh \
 	$(top_srcdir)/build-aux/missing AUTHORS COPYING ChangeLog \
-	INSTALL NEWS README build-aux/depcomp build-aux/install-sh \
-	build-aux/missing
+	INSTALL NEWS README build-aux/compile build-aux/depcomp \
+	build-aux/install-sh build-aux/missing
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 distdir = $(PACKAGE)-$(VERSION)
 top_distdir = $(distdir)
@@ -200,6 +207,9 @@ AUTOCONF = @AUTOCONF@
 AUTOHEADER = @AUTOHEADER@
 AUTOMAKE = @AUTOMAKE@
 AWK = @AWK@
+CC = @CC@
+CCDEPMODE = @CCDEPMODE@
+CFLAGS = @CFLAGS@
 CPPFLAGS = @CPPFLAGS@
 CXX = @CXX@
 CXXDEPMODE = @CXXDEPMODE@
@@ -244,6 +254,7 @@ abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
 abs_top_builddir = @abs_top_builddir@
 abs_top_srcdir = @abs_top_srcdir@
+ac_ct_CC = @ac_ct_CC@
 ac_ct_CXX = @ac_ct_CXX@
 am__include = @am__include@
 am__leading_dot = @am__leading_dot@
@@ -283,9 +294,9 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 ACLOCAL_AMFLAGS = -I m4 --install
-rover_daemon_SOURCES = src/main.cpp
+rover_daemon_SOURCES = src/main.cpp src/deviceuc0service.cpp src/logging.cpp src/messagequeue.cpp src/netservice.cpp src/server.cpp src/videostreammanager.cpp
 rover_daemon_LDADD = $(DEPS_LIBS)
-rover_daemon_CPPFLAGS = -std=c++14
+rover_daemon_CPPFLAGS = -std=c++14 -pthread
 EXTRA_DIST = m4/PLACEHOLDER
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-am
@@ -390,6 +401,18 @@ src/$(DEPDIR)/$(am__dirstamp):
 	@: > src/$(DEPDIR)/$(am__dirstamp)
 src/rover_daemon-main.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
+src/rover_daemon-deviceuc0service.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
+src/rover_daemon-logging.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
+src/rover_daemon-messagequeue.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
+src/rover_daemon-netservice.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
+src/rover_daemon-server.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
+src/rover_daemon-videostreammanager.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
 
 rover_daemon$(EXEEXT): $(rover_daemon_OBJECTS) $(rover_daemon_DEPENDENCIES) $(EXTRA_rover_daemon_DEPENDENCIES) 
 	@rm -f rover_daemon$(EXEEXT)
@@ -402,7 +425,13 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/rover_daemon-deviceuc0service.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/rover_daemon-logging.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/rover_daemon-main.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/rover_daemon-messagequeue.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/rover_daemon-netservice.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/rover_daemon-server.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/rover_daemon-videostreammanager.Po@am__quote@
 
 .cpp.o:
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.o$$||'`;\
@@ -433,6 +462,90 @@ src/rover_daemon-main.obj: src/main.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/main.cpp' object='src/rover_daemon-main.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(rover_daemon_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/rover_daemon-main.obj `if test -f 'src/main.cpp'; then $(CYGPATH_W) 'src/main.cpp'; else $(CYGPATH_W) '$(srcdir)/src/main.cpp'; fi`
+
+src/rover_daemon-deviceuc0service.o: src/deviceuc0service.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(rover_daemon_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/rover_daemon-deviceuc0service.o -MD -MP -MF src/$(DEPDIR)/rover_daemon-deviceuc0service.Tpo -c -o src/rover_daemon-deviceuc0service.o `test -f 'src/deviceuc0service.cpp' || echo '$(srcdir)/'`src/deviceuc0service.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/rover_daemon-deviceuc0service.Tpo src/$(DEPDIR)/rover_daemon-deviceuc0service.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/deviceuc0service.cpp' object='src/rover_daemon-deviceuc0service.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(rover_daemon_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/rover_daemon-deviceuc0service.o `test -f 'src/deviceuc0service.cpp' || echo '$(srcdir)/'`src/deviceuc0service.cpp
+
+src/rover_daemon-deviceuc0service.obj: src/deviceuc0service.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(rover_daemon_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/rover_daemon-deviceuc0service.obj -MD -MP -MF src/$(DEPDIR)/rover_daemon-deviceuc0service.Tpo -c -o src/rover_daemon-deviceuc0service.obj `if test -f 'src/deviceuc0service.cpp'; then $(CYGPATH_W) 'src/deviceuc0service.cpp'; else $(CYGPATH_W) '$(srcdir)/src/deviceuc0service.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/rover_daemon-deviceuc0service.Tpo src/$(DEPDIR)/rover_daemon-deviceuc0service.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/deviceuc0service.cpp' object='src/rover_daemon-deviceuc0service.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(rover_daemon_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/rover_daemon-deviceuc0service.obj `if test -f 'src/deviceuc0service.cpp'; then $(CYGPATH_W) 'src/deviceuc0service.cpp'; else $(CYGPATH_W) '$(srcdir)/src/deviceuc0service.cpp'; fi`
+
+src/rover_daemon-logging.o: src/logging.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(rover_daemon_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/rover_daemon-logging.o -MD -MP -MF src/$(DEPDIR)/rover_daemon-logging.Tpo -c -o src/rover_daemon-logging.o `test -f 'src/logging.cpp' || echo '$(srcdir)/'`src/logging.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/rover_daemon-logging.Tpo src/$(DEPDIR)/rover_daemon-logging.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/logging.cpp' object='src/rover_daemon-logging.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(rover_daemon_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/rover_daemon-logging.o `test -f 'src/logging.cpp' || echo '$(srcdir)/'`src/logging.cpp
+
+src/rover_daemon-logging.obj: src/logging.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(rover_daemon_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/rover_daemon-logging.obj -MD -MP -MF src/$(DEPDIR)/rover_daemon-logging.Tpo -c -o src/rover_daemon-logging.obj `if test -f 'src/logging.cpp'; then $(CYGPATH_W) 'src/logging.cpp'; else $(CYGPATH_W) '$(srcdir)/src/logging.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/rover_daemon-logging.Tpo src/$(DEPDIR)/rover_daemon-logging.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/logging.cpp' object='src/rover_daemon-logging.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(rover_daemon_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/rover_daemon-logging.obj `if test -f 'src/logging.cpp'; then $(CYGPATH_W) 'src/logging.cpp'; else $(CYGPATH_W) '$(srcdir)/src/logging.cpp'; fi`
+
+src/rover_daemon-messagequeue.o: src/messagequeue.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(rover_daemon_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/rover_daemon-messagequeue.o -MD -MP -MF src/$(DEPDIR)/rover_daemon-messagequeue.Tpo -c -o src/rover_daemon-messagequeue.o `test -f 'src/messagequeue.cpp' || echo '$(srcdir)/'`src/messagequeue.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/rover_daemon-messagequeue.Tpo src/$(DEPDIR)/rover_daemon-messagequeue.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/messagequeue.cpp' object='src/rover_daemon-messagequeue.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(rover_daemon_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/rover_daemon-messagequeue.o `test -f 'src/messagequeue.cpp' || echo '$(srcdir)/'`src/messagequeue.cpp
+
+src/rover_daemon-messagequeue.obj: src/messagequeue.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(rover_daemon_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/rover_daemon-messagequeue.obj -MD -MP -MF src/$(DEPDIR)/rover_daemon-messagequeue.Tpo -c -o src/rover_daemon-messagequeue.obj `if test -f 'src/messagequeue.cpp'; then $(CYGPATH_W) 'src/messagequeue.cpp'; else $(CYGPATH_W) '$(srcdir)/src/messagequeue.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/rover_daemon-messagequeue.Tpo src/$(DEPDIR)/rover_daemon-messagequeue.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/messagequeue.cpp' object='src/rover_daemon-messagequeue.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(rover_daemon_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/rover_daemon-messagequeue.obj `if test -f 'src/messagequeue.cpp'; then $(CYGPATH_W) 'src/messagequeue.cpp'; else $(CYGPATH_W) '$(srcdir)/src/messagequeue.cpp'; fi`
+
+src/rover_daemon-netservice.o: src/netservice.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(rover_daemon_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/rover_daemon-netservice.o -MD -MP -MF src/$(DEPDIR)/rover_daemon-netservice.Tpo -c -o src/rover_daemon-netservice.o `test -f 'src/netservice.cpp' || echo '$(srcdir)/'`src/netservice.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/rover_daemon-netservice.Tpo src/$(DEPDIR)/rover_daemon-netservice.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/netservice.cpp' object='src/rover_daemon-netservice.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(rover_daemon_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/rover_daemon-netservice.o `test -f 'src/netservice.cpp' || echo '$(srcdir)/'`src/netservice.cpp
+
+src/rover_daemon-netservice.obj: src/netservice.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(rover_daemon_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/rover_daemon-netservice.obj -MD -MP -MF src/$(DEPDIR)/rover_daemon-netservice.Tpo -c -o src/rover_daemon-netservice.obj `if test -f 'src/netservice.cpp'; then $(CYGPATH_W) 'src/netservice.cpp'; else $(CYGPATH_W) '$(srcdir)/src/netservice.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/rover_daemon-netservice.Tpo src/$(DEPDIR)/rover_daemon-netservice.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/netservice.cpp' object='src/rover_daemon-netservice.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(rover_daemon_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/rover_daemon-netservice.obj `if test -f 'src/netservice.cpp'; then $(CYGPATH_W) 'src/netservice.cpp'; else $(CYGPATH_W) '$(srcdir)/src/netservice.cpp'; fi`
+
+src/rover_daemon-server.o: src/server.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(rover_daemon_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/rover_daemon-server.o -MD -MP -MF src/$(DEPDIR)/rover_daemon-server.Tpo -c -o src/rover_daemon-server.o `test -f 'src/server.cpp' || echo '$(srcdir)/'`src/server.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/rover_daemon-server.Tpo src/$(DEPDIR)/rover_daemon-server.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/server.cpp' object='src/rover_daemon-server.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(rover_daemon_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/rover_daemon-server.o `test -f 'src/server.cpp' || echo '$(srcdir)/'`src/server.cpp
+
+src/rover_daemon-server.obj: src/server.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(rover_daemon_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/rover_daemon-server.obj -MD -MP -MF src/$(DEPDIR)/rover_daemon-server.Tpo -c -o src/rover_daemon-server.obj `if test -f 'src/server.cpp'; then $(CYGPATH_W) 'src/server.cpp'; else $(CYGPATH_W) '$(srcdir)/src/server.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/rover_daemon-server.Tpo src/$(DEPDIR)/rover_daemon-server.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/server.cpp' object='src/rover_daemon-server.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(rover_daemon_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/rover_daemon-server.obj `if test -f 'src/server.cpp'; then $(CYGPATH_W) 'src/server.cpp'; else $(CYGPATH_W) '$(srcdir)/src/server.cpp'; fi`
+
+src/rover_daemon-videostreammanager.o: src/videostreammanager.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(rover_daemon_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/rover_daemon-videostreammanager.o -MD -MP -MF src/$(DEPDIR)/rover_daemon-videostreammanager.Tpo -c -o src/rover_daemon-videostreammanager.o `test -f 'src/videostreammanager.cpp' || echo '$(srcdir)/'`src/videostreammanager.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/rover_daemon-videostreammanager.Tpo src/$(DEPDIR)/rover_daemon-videostreammanager.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/videostreammanager.cpp' object='src/rover_daemon-videostreammanager.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(rover_daemon_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/rover_daemon-videostreammanager.o `test -f 'src/videostreammanager.cpp' || echo '$(srcdir)/'`src/videostreammanager.cpp
+
+src/rover_daemon-videostreammanager.obj: src/videostreammanager.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(rover_daemon_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/rover_daemon-videostreammanager.obj -MD -MP -MF src/$(DEPDIR)/rover_daemon-videostreammanager.Tpo -c -o src/rover_daemon-videostreammanager.obj `if test -f 'src/videostreammanager.cpp'; then $(CYGPATH_W) 'src/videostreammanager.cpp'; else $(CYGPATH_W) '$(srcdir)/src/videostreammanager.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/rover_daemon-videostreammanager.Tpo src/$(DEPDIR)/rover_daemon-videostreammanager.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/videostreammanager.cpp' object='src/rover_daemon-videostreammanager.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(rover_daemon_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/rover_daemon-videostreammanager.obj `if test -f 'src/videostreammanager.cpp'; then $(CYGPATH_W) 'src/videostreammanager.cpp'; else $(CYGPATH_W) '$(srcdir)/src/videostreammanager.cpp'; fi`
 
 ID: $(am__tagged_files)
 	$(am__define_uniq_tagged_files); mkid -fID $$unique

@@ -44,6 +44,7 @@ class DeviceUC0Service
         pthread_mutex_t deviceLockMutex;
         device_rover* deviceHandler;
 
+        bool distanceRequestPending;
         pthread_mutex_t distanceMonitorMutex;
         pthread_cond_t distanceMonitorCond;
 

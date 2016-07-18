@@ -8,15 +8,16 @@
  * Copyright (C) 2016 Tomasz Chadzynski
  */
 
+#include <stdexcept>
+
 #include "messagequeue.h"
-#include "exceptions.h"
+#include "logging.h"
 
 //thread cleanup routines
 namespace {
     void CleanupMutexUnlock(void *mutex)
     {
-        if(0 != pthread_mutex_unlock(static_cast<pthread_mutex_t*>(mutex)))
-            throw std::runtime_error("MessageQueue::CleanupMutexUnlock: Unable to unlock queue mutex");
+        PTHREAD_GUARD( pthread_mutex_unlock(static_cast<pthread_mutex_t*>(mutex)) );
     }
 };
 
@@ -24,54 +25,8 @@ template<typename T>
 MessageQueue<T>::MessageQueue()
 {
 
-    if(0 != pthread_mutex_init(&queueMutex, NULL))
-       throw std::runtime_error("MessageQueue: Unable to initialize mutex");
-
-    if(0 != pthread_cond_init(&queueCond, NULL))
-       throw std::runtime_error("MessageQueue: Unable to initialize condition variable");
-}
-
-template<typename T>
-void MessageQueue<T>::Enqueue(const T& item)
-{
-    if(0 != pthread_mutex_lock(&queueMutex))
-        throw std::runtime_error("MessageQueue::Enqueue: Failed to lock the queue mutex");
-
-    queue.push(item);
-
-    if( 0 != pthread_mutex_unlock(&queueMutex))
-        throw std::runtime_error("MessageQueue::Enqueue: Failed to unlock the queue mutex");
-
-    if( 0 != pthread_cond_signal(&queueCond))
-        throw std::runtime_error("MessageQueue::Enqueue: Failed to signal cond variable");
-
-
-}
-
-template<typename T>
-T MessageQueue<T>::Dequeue()
-{
-    T retval;
-    if( 0 != pthread_mutex_lock(&queueMutex))
-        throw std::runtime_error("MessageQueue::Dequeue: Failed to lock the queue mutex");
-
-    pthread_cleanup_push(CleanupMutexUnlock, &queueMutex);
-
-    while(queue.empty()) {
-        if( 0 != pthread_cond_wait(&queueCond, &queueMutex)) {
-            throw std::runtime_error("MessageQueue::Dequeue: Failed to execute cond wait");
-        }
-    }
-
-    retval = queue.front();
-    queue.pop();
-
-    pthread_cleanup_pop(0);
-
-    if(0 != pthread_mutex_unlock(&queueMutex))
-        throw std::runtime_error("MessageQueue::Dequeue: Failed to unlock the queue mutex");
-
-    return retval;
+    PTHREAD_GUARD( pthread_mutex_init(&queueMutex, NULL) );
+    PTHREAD_GUARD( pthread_cond_init(&queueCond, NULL) );
 }
 
 template<typename T>
@@ -79,4 +34,63 @@ MessageQueue<T>::~MessageQueue()
 {
     pthread_cond_destroy(&queueCond);
     pthread_mutex_destroy(&queueMutex);
+}
+
+template<typename T>
+void MessageQueue<T>::Enqueue(const T& item)
+{
+    PTHREAD_GUARD( pthread_mutex_lock(&queueMutex) );
+
+    queue.push(item);
+
+    PTHREAD_GUARD( pthread_mutex_unlock(&queueMutex) );
+    PTHREAD_GUARD( pthread_cond_signal(&queueCond) );
+}
+
+template<typename T>
+T MessageQueue<T>::Dequeue()
+{
+    T retval;
+    PTHREAD_GUARD( pthread_mutex_lock(&queueMutex) );
+
+    pthread_cleanup_push(CleanupMutexUnlock, &queueMutex);
+
+    while(queue.empty()) {
+        PTHREAD_GUARD( pthread_cond_wait(&queueCond, &queueMutex) );
+    }
+
+    retval = queue.front();
+    queue.pop();
+
+    pthread_cleanup_pop(0);
+
+    PTHREAD_GUARD( pthread_mutex_unlock(&queueMutex) );
+
+    return retval;
+}
+
+template<typename T>
+void MessageQueue<T>::Clear()
+{
+    PTHREAD_GUARD( pthread_mutex_lock(&queueMutex) );
+
+    while(!queue.empty()) {
+        queue.pop();
+    }
+
+    PTHREAD_GUARD( pthread_mutex_unlock(&queueMutex) );
+}
+
+template<typename T>
+bool MessageQueue<T>::Empty()
+{
+    bool ret;
+
+    PTHREAD_GUARD( pthread_mutex_lock(&queueMutex) );
+
+    ret = queue.empty();
+
+    PTHREAD_GUARD( pthread_mutex_unlock(&queueMutex) );
+
+    return ret;
 }

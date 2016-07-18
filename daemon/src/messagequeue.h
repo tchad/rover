@@ -28,6 +28,8 @@ class MessageQueue
 
         void Enqueue(const T& item);
         T Dequeue();
+        void Clear();
+        bool Empty();
 
     private:
         std::queue<T> queue;

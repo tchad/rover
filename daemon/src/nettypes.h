@@ -52,7 +52,7 @@ namespace RoverNet
 
     struct DataDistance
     {
-        uint32_t distanceCM;
+        int32_t distanceCM;
     };
 
     struct DataVideoStreamPort
@@ -79,8 +79,11 @@ namespace RoverNet
         } data;
     };
 
+    constexpr size_t MESSAGE_STRUCT_SIZE = sizeof(Message);
+
     using NetMsgQueue = MessageQueue<Message>;
     using NetMsgQueueShrPtr = std::shared_ptr<NetMsgQueue>;
+
 };
 
 #endif /* _NET_TYPES_H_ */
