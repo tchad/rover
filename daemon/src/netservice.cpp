@@ -76,12 +76,14 @@ namespace RoverNet
         try {
 
             int bcastSocket;
+            int bcastEnable = 1;
             sockaddr_in bcastAddr;
             bcastAddr.sin_family = AF_INET;
             bcastAddr.sin_port = htons(SERVER_UDP_AVAL_BCAST_PORT);
 
             if( 1 != inet_pton(AF_INET, SERVER_UDP_AVAL_BCAST_ADDR, &bcastAddr.sin_addr.s_addr)) THROW_RUNTIME();
-            if( -1 ==  socket(AF_INET, SOCK_DGRAM, 0)) THROW_RUNTIME();
+            if( -1 == (bcastSocket =  socket(AF_INET, SOCK_DGRAM, 0))) THROW_RUNTIME();
+            if( -1 == setsockopt(bcastSocket, SOL_SOCKET, SO_BROADCAST, &bcastEnable, sizeof(bcastEnable))) THROW_RUNTIME();
 
             pthread_cleanup_push(CleanupSocketProc, &bcastSocket);
 
@@ -133,7 +135,7 @@ namespace RoverNet
             servAddr.sin_port = htons(SERVER_TCP_PORT);
 
             if( 1 != inet_pton(AF_INET, SERVER_IP4_ADDR, &servAddr.sin_addr.s_addr)) THROW_RUNTIME();
-            if( -1 ==  socket(AF_INET, SOCK_STREAM, 0)) THROW_RUNTIME();
+            if( -1 == (servSocket =  socket(AF_INET, SOCK_STREAM, 0))) THROW_RUNTIME();
 
             pthread_cleanup_push(CleanupSocketProc, &servSocket);
 
