@@ -37,5 +37,7 @@ class MessageQueue
         pthread_cond_t  queueCond;
 };
 
+#include "messagequeue.th"
+
 #endif /* _MESSAGE_QUEUE_H_ */
 

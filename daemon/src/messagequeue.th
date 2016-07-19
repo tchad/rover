@@ -8,14 +8,11 @@
  * Copyright (C) 2016 Tomasz Chadzynski
  */
 
-#include <stdexcept>
-
-#include "messagequeue.h"
 #include "logging.h"
 
 //thread cleanup routines
-namespace {
-    void CleanupMutexUnlock(void *mutex)
+namespace _MSGQI_ {
+    static void CleanupMutexUnlock(void *mutex)
     {
         PTHREAD_GUARD( pthread_mutex_unlock(static_cast<pthread_mutex_t*>(mutex)) );
     }
@@ -53,7 +50,7 @@ T MessageQueue<T>::Dequeue()
     T retval;
     PTHREAD_GUARD( pthread_mutex_lock(&queueMutex) );
 
-    pthread_cleanup_push(CleanupMutexUnlock, &queueMutex);
+    pthread_cleanup_push(_MSGQI_::CleanupMutexUnlock, &queueMutex);
 
     while(queue.empty()) {
         PTHREAD_GUARD( pthread_cond_wait(&queueCond, &queueMutex) );
