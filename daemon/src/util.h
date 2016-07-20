@@ -23,7 +23,7 @@ constexpr long DEV_CMD_SEND_T_NSEC = 100000000L; //100 msec
 constexpr unsigned int NET_STATUS_BCAST_T_SEC = 5;
 
 constexpr uint16_t SERVER_TCP_PORT = 5551;
-constexpr const char* SERVER_IP4_ADDR = "192.168.1.122";
+constexpr const char* SERVER_IP4_ADDR = "192.168.1.4";
 
 constexpr uint16_t SERVER_UDP_AVAL_BCAST_PORT = 5552;
 constexpr const char* SERVER_UDP_AVAL_BCAST_ADDR = "192.168.1.255";

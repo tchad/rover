@@ -12,6 +12,7 @@
 #include <signal.h>
 #include <unistd.h>
 #include <time.h>
+#include <cxxabi.h>
 
 #include "deviceuc0service.h"
 #include "util.h"
@@ -42,6 +43,7 @@ DeviceUC0Service::~DeviceUC0Service()
  */
     if(deviceHandler != nullptr) {
         release_device_rover(deviceHandler);
+        deviceHandler = nullptr;
     }
 
     pthread_mutex_destroy(&deviceLockMutex);
@@ -79,6 +81,7 @@ void DeviceUC0Service::Stop()
 
     if(deviceHandler != nullptr) {
         release_device_rover(deviceHandler);
+        deviceHandler = nullptr;
     }
 
 }
@@ -147,6 +150,9 @@ void* DeviceUC0Service::ThreadIncomingCommandProcedure(void *arg)
     catch(const std::exception &e) {
         syslog(LOG_ERR, LOG_EXCEPT("DeviceUC0Service", e));
         kill(getpid(), SIGTERM);
+    }
+    catch(abi::__forced_unwind&) {
+        throw;
     }
     catch(...) {
         syslog(LOG_ERR, LOG_MSG("DeviceUC0Service", "unknown exception"));
@@ -244,6 +250,9 @@ void* DeviceUC0Service::ThreadDelayedMessageProcedure(void *arg)
         syslog(LOG_ERR, LOG_EXCEPT("DeviceUC0Service", e));
         kill(getpid(), SIGTERM);
     }
+    catch(abi::__forced_unwind&) {
+        throw;
+    }
     catch(...) {
         syslog(LOG_ERR, LOG_MSG("DeviceUC0Service", "unknown exception"));
         kill(getpid(), SIGTERM);
@@ -305,6 +314,9 @@ void* DeviceUC0Service::ThreadDistanceMonitorProcedure(void *arg)
     catch(const std::exception &e) {
         syslog(LOG_ERR, LOG_EXCEPT("DeviceUC0Service", e));
         kill(getpid(), SIGTERM);
+    }
+    catch(abi::__forced_unwind&) {
+        throw;
     }
     catch(...) {
         syslog(LOG_ERR, LOG_MSG("DeviceUC0Service", "unknown exception"));

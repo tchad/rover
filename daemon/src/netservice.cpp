@@ -15,6 +15,7 @@
 #include <unistd.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <cxxabi.h>
 
 #include "netservice.h"
 #include "util.h"
@@ -117,6 +118,9 @@ namespace RoverNet
         catch(const std::exception &e) {
             syslog(LOG_ERR, LOG_EXCEPT("NetService", e));
             kill(getpid(), SIGTERM);
+        }
+        catch(abi::__forced_unwind&) {
+            throw;
         }
         catch(...) {
             syslog(LOG_ERR, LOG_MSG("NetService", "unknown exception"));
@@ -225,6 +229,9 @@ namespace RoverNet
             syslog(LOG_ERR, LOG_EXCEPT("NetService", e));
             kill(getpid(), SIGTERM);
         }
+        catch(abi::__forced_unwind&) {
+            throw;
+        }
         catch(...) {
             syslog(LOG_ERR, LOG_MSG("NetService", "unknown exception"));
             kill(getpid(), SIGTERM);
@@ -268,6 +275,9 @@ namespace RoverNet
         catch(const std::exception &e) {
             syslog(LOG_ERR, LOG_EXCEPT("NetService", e));
             kill(getpid(), SIGTERM);
+        }
+        catch(abi::__forced_unwind&) {
+            throw;
         }
         catch(...) {
             syslog(LOG_ERR, LOG_MSG("NetService", "unknown exception"));
